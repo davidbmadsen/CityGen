@@ -54,7 +54,7 @@ public class NetworkGenerator : MonoBehaviour
         junction.transform.position = position;
         Debug.Log("Position: " + junction.transform.position);
 
-    }
+    } 
 
 
     // Debug function to draw streamlines in the form of lines
@@ -83,8 +83,8 @@ public class NetworkGenerator : MonoBehaviour
 
         for (int i = 0; i < this.amount; i++)
         {
-
-            List<OrientedPoint> streamline = field.Trace(field.Orthogonal, scale, offset, true, origin + new Vector3(i * 100, 0, 0), false, majorLength);
+            List<OrientedPoint>[,] roadPoints = new List<OrientedPoint>[5000,5000];
+            List<OrientedPoint> streamline = field.Trace(field.Orthogonal, scale, offset, true, origin + new Vector3(i * 100, 0, 0), false, majorLength, roadPoints);
 
             // Loop through streamline points and draw rays between
             Vector3 prev = streamline[0].position;

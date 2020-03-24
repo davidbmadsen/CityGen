@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[RequireComponent(typeof(Road))]
-public class Spline : MonoBehaviour
+
+public class Spline 
 {
     /* Class for connecting to roads with a spline interpolation
 
@@ -14,37 +14,25 @@ public class Spline : MonoBehaviour
     */
     Road road;
     public bool autoUpdate;
+    public List<OrientedPoint> pointsPath;
 
-    [SerializeField]
-    public OrientedPoint pointOne;
-    public OrientedPoint pointTwo;
-
-    public float slider;
-
-    List<OrientedPoint> pointsPath;
-    void Update()
-    {
-        ConnectChildren();
-    }
-    public void ConnectChildren()
-    {
-        List<OrientedPoint> path = Connect(pointOne, pointTwo);
-
-        GetComponent<Road>().Extrude(path);
-
-    }
     public List<OrientedPoint> Connect(OrientedPoint start, OrientedPoint end)
     {
         List<OrientedPoint> path = new List<OrientedPoint>();
 
-        int length = 50;
+        int length = 13;
 
         for (int i = 0; i < length; i++)
         {
+            // Non-normalized path
             path.Add(BezierCubic(start, end, (i / (float)(length - 1))));
-        }
 
+            // Add current point to previous neighbor list
+            if (i > 0) { path[i - 1].neighbors.Add(path[i]); }
+        }
         pointsPath = path;
+
+
         return path;
     }
 
@@ -53,9 +41,11 @@ public class Spline : MonoBehaviour
         return new OrientedPoint(
             Vector3.Lerp(a.position, b.position, t),
             Quaternion.Slerp(a.rotation, b.rotation, t),
-            a.magnitude + (b.magnitude - a.magnitude) * t
+            a.magnitude + (b.magnitude - a.magnitude) * t,
+            new List<OrientedPoint>()
         );
     }
+
     public OrientedPoint BezierSquare(OrientedPoint start, OrientedPoint controlPoint, OrientedPoint end, float t)
     {
 
@@ -76,15 +66,17 @@ public class Spline : MonoBehaviour
     {
         // Calculate control points, a for the start, b for the end
         OrientedPoint a = new OrientedPoint(
-            start.position + (start.rotation * Vector3.forward * 10),
+            start.position + (start.rotation * Vector3.forward * 20),
             start.rotation,
-            start.magnitude
+            start.magnitude,
+            new List<OrientedPoint>()
         );
 
         OrientedPoint b = new OrientedPoint(
-            end.position + (end.rotation * Vector3.back * 10),
+            end.position + (end.rotation * Vector3.back * 20),
             end.rotation * Quaternion.LookRotation(Vector3.back),
-            end.magnitude
+            end.magnitude,
+            new List<OrientedPoint>()
         );
 
         // Square bezier between points start - a - b
@@ -95,43 +87,5 @@ public class Spline : MonoBehaviour
 
         // Lerp between points ab - bc to produce the final point in the bezier curve
         return LerpOrientedPoint(ab, bc, t);
-
-    }
-
-    void OnDrawGizmos()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawSphere(pointOne.position, pointOne.magnitude);
-        Gizmos.DrawSphere(pointTwo.position, pointTwo.magnitude);
-
-        try
-        {
-            foreach (OrientedPoint point in pointsPath)
-            {
-                Gizmos.DrawSphere(point.position, 0.5f);
-                Gizmos.DrawRay(point.position, point.rotation * Vector3.forward);
-            }
-
-
-            // Gizmos.DrawSphere(Vector3.Lerp(pointOne.position, pointTwo.position, 0.5f), 1f);
-            OrientedPoint ctrlPoint = new OrientedPoint(
-                pointOne.position + (pointOne.rotation * Vector3.forward * 5),
-                pointOne.rotation,
-                1
-            );
-
-            OrientedPoint midPoint = LerpOrientedPoint(pointOne, pointTwo, 0.5f);
-            OrientedPoint anotherMidPoint = BezierSquare(pointOne, ctrlPoint, pointTwo, slider / 10);
-
-            OrientedPoint somePoint = BezierCubic(pointOne, pointTwo, slider / 10);
-            //Debug.Log("Pos: " + anotherMidPoint.position);
-
-            //Gizmos.DrawSphere(ctrlPoint.position, midPoint.magnitude);
-            Gizmos.DrawCube(somePoint.position, Vector3.one * somePoint.magnitude);
-        }
-        catch
-        {
-            Debug.Log("List empty?");
-        }
     }
 }

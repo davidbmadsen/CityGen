@@ -11,69 +11,53 @@ public class Road : MonoBehaviour
     /*
     Road mesh generation class
     */
+
     Mesh roadMesh;
     Field field;
 
     Junction junc;
     MeshRenderer rend;
+
     public bool drawVertexGizmos;
-    public float scale = 500;
-    public int roadLength = 8000;
+    public float scale = 350;
+    public int roadLength = 5000;
 
     public OrientedPoint seed;
     public Vector3 startingPoint;
 
+    public List<OrientedPoint> path;
+
     Vector3[] vertices;
     int[] triangles;
     Vector2[] uvs;
+
     void Update()
     {
         //GenerateMesh(seed);
     }
 
-    public void GenerateMesh(OrientedPoint seed, int length, bool major, bool rev)
-    {   
+    public void GenerateRoad(OrientedPoint seed, int length, bool major, bool rev)
+    {
         float offset = GetComponentInParent<RoadNetwork>().offset;
         int interval = GetComponentInParent<RoadNetwork>().interval;
+        List<OrientedPoint>[,] roadPoints = GetComponentInParent<RoadNetwork>().roadPoints;
 
         field = new Field();
-
-        List<OrientedPoint> path = field.Trace(field.Orthogonal, this.scale, offset, major, transform.position + seed.position, rev, length);
+        path = field.Trace(field.Orthogonal, this.scale, offset, major, transform.position + seed.position, rev, length, roadPoints);
+        if (path.Count == 0) { return; }
 
         Extrude(path);
 
-        // Pass the seeds up to the parents list
-        for (int k = 0; k < path.Count; k++)
+        // Pass road path to parent
+        foreach (OrientedPoint point in path)
         {
-            if (k % interval == 0)
-            {
-                try
-                {
-                    transform.parent.GetComponentInParent<RoadNetwork>().seeds.Enqueue(path[k]);
-                }
-                catch (Exception e)
-                {
-                    Debug.Log(e.ToString());
-                }
-            }
+            int indX = ((int)(point.position.x / 10) + roadPoints.GetLength(0) / 2);
+            int indZ = ((int)(point.position.z / 10) + roadPoints.GetLength(1) / 2);
+            // Debug.Log("point: " + point.position +
+            // "\nindX: " + indX + "\nindZ: " + indZ);
+
+            GetComponentInParent<RoadNetwork>().roadPoints[indX, indZ].Add(point);
         }
-
-        // Generate points for start and end with collider, as well as draw a cube there
-        GameObject start = new GameObject("Start");
-        start.transform.parent = this.transform;
-        start.transform.position = path[0].position;
-        start.transform.rotation = path[0].rotation;
-        start.AddComponent<SphereCollider>();
-        start.AddComponent<Junction>();
-        start.GetComponent<Junction>().GenerateJunction(path[0]);
-
-        GameObject end = new GameObject("End");
-        end.transform.parent = this.transform;
-        end.transform.position = path[path.Count - 1].position;
-        end.transform.rotation = path[path.Count - 1].rotation;
-        end.AddComponent<SphereCollider>();
-        end.AddComponent<Junction>();
-        end.GetComponent<Junction>().GenerateJunction(path[path.Count - 1]);
     }
 
 
@@ -94,6 +78,7 @@ public class Road : MonoBehaviour
         Profile profile = new Profile(shape);
 
         // Mesh dimensions
+
         int width = profile.GetNumVertices;
         int length = path.Count;
 
@@ -111,7 +96,6 @@ public class Road : MonoBehaviour
                 uvs[vert] = new Vector2(profile.VertexCoords[j].x, i);
                 vert++;
             }
-
         }
 
         // Calculate triangle indices
@@ -123,7 +107,6 @@ public class Road : MonoBehaviour
                 triangles[triIdx] = vertIdx;
                 triangles[triIdx + 1] = vertIdx + width;
                 triangles[triIdx + 2] = vertIdx + width + 1;
-
                 triangles[triIdx + 3] = vertIdx;
                 triangles[triIdx + 4] = vertIdx + width + 1;
                 triangles[triIdx + 5] = vertIdx + 1;

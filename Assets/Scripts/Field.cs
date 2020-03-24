@@ -1,4 +1,6 @@
 ﻿using System.Collections;
+using System;
+using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,6 +9,19 @@ public class Field
     /*
     Create a field of eigenvectors
     */
+    Spline spline;
+
+    // Step size
+    static float h = 10f;
+
+    // Search cone radius
+    static int searchRadius = (int)(h * 10);
+
+    // Search cone angle (degrees)
+    static float searchAngle = 35;
+
+    // List lookup range
+    static int lookupRange = (int)(searchRadius / 10);
 
     public float LinearGradient(float x, float z)
     {
@@ -22,8 +37,9 @@ public class Field
         */
 
         OrientedPoint eigenVector = new OrientedPoint();
+        eigenVector.neighbors = new List<OrientedPoint>();
         eigenVector.position = point;
-
+        eigenVector.major = major;
         float x_0 = (point.x + offset) / scale;
         float z_0 = (point.z + offset) / scale;
 
@@ -51,65 +67,176 @@ public class Field
         return eigenVector;
     }
 
+    bool CheckBounds(OrientedPoint point, int mapSize)
+    {
+        if (point.magnitude <= 0.1 || point.position.x > mapSize || point.position.z > mapSize)
+        {
+            Debug.Log("Bounds check failed, returning...");
+            return true;
+        }
+        else return false;
+    }
 
+    Tuple<bool, OrientedPoint> FindClosestCollisionPoint(OrientedPoint origin, List<OrientedPoint>[,] roadPoints, float threshold, float theta)
+    {
+        // Set the current closest distance to something very big
+        float currentBestDistance = Mathf.Infinity;
+        OrientedPoint closestPoint = new OrientedPoint();
+        bool flag = false;
 
-    public List<OrientedPoint> Trace(System.Func<Vector3, float, float, bool, OrientedPoint> FieldFunction,
+        // Round and convert to index to access appropriate sublists 
+        int indX = ((int)(origin.position.x / 10) + roadPoints.GetLength(0) / 2);
+        int indZ = ((int)(origin.position.z / 10) + roadPoints.GetLength(1) / 2);
+
+        // Double for loop getting the lists around the point found to be closest
+        for (int x = -lookupRange; x < lookupRange; x++)
+        {
+            for (int z = -lookupRange; z < lookupRange; z++)
+            {
+                foreach (OrientedPoint point in roadPoints[indX + x, indZ + z])
+                {
+
+                    float dist = CalcDistance(origin, point);
+
+                    if (CheckProximity(origin, point, threshold, theta) && dist < currentBestDistance)
+                    {
+                        // Debug.Log("Found better point: " + point.position);
+                        flag = true;
+                        currentBestDistance = dist;
+                        closestPoint = point;
+                    }
+                }
+            }
+        }
+
+        // Update neighbors
+        closestPoint.neighbors.Add(origin);
+        origin.neighbors.Add(closestPoint);
+
+        return new Tuple<bool, OrientedPoint>(flag, closestPoint);
+    }
+
+    bool CheckProximity(OrientedPoint origin, OrientedPoint comparison, float threshold, float theta)
+    {
+        // Check if the points are too close, if yes, add them as neighbors to eachother and returns true
+
+        // Angle between origin orientation and the point
+        Quaternion rotationToTarget = Quaternion.LookRotation(comparison.position - origin.position, Vector3.up);
+
+        // Search in a 120 degree cone forwards
+        float dist = CalcDistance(origin, comparison);
+        if (dist >= 3 && dist <= threshold && Quaternion.Angle(origin.rotation, rotationToTarget) <= theta)
+        {
+
+            // Debug.Log("Points " + origin.position + " and " + comparison.position + " too close. (Distance " + CalcDistance(origin, comparison) + ")");
+            return true;
+        }
+        else return false;
+    }
+
+    float CalcDistance(OrientedPoint a, OrientedPoint b)
+    {
+        return (b.position - a.position).magnitude;
+    }
+
+    public List<OrientedPoint> Trace(System.Func<Vector3, float, float, bool, OrientedPoint> Sample,
                             float scale,
                             float offset,
                             bool major,
                             Vector3 startPoint,
                             bool reverse,
-                            int length)
+                            int length,
+                            List<OrientedPoint>[,] roadPoints)
     {
         /*
         Trace the hyperstreamlines using RK4
         RK4 Code courtesy of Martin Evans ()
         */
+
         // The Vector3 point at which the streamline tracing is begun
         Vector3 currentPoint = startPoint;
 
+        int mapSize = roadPoints.GetLength(0);
+
         List<OrientedPoint> hyperstreamline = new List<OrientedPoint>();
 
-        float h = 1f;
-
         for (int i = 0; i < length; i++)
-        {   
-            OrientedPoint pointAlongStreamline = FieldFunction(currentPoint, scale, offset, major);
+        {
+            OrientedPoint pointAlongStreamline = Sample(currentPoint, scale, offset, major);
 
-            if (pointAlongStreamline.magnitude <= 0.1) { break; }
+            // Magnitude and bounds check
+            if (CheckBounds(pointAlongStreamline, mapSize)) { break; }
+
+            // Check if the current point is close to the rest of the road points
+            // try-catch in case the list of road points is empty
 
             // Update the starting point for next iteration            
             if (reverse)
-            {   
+            {
                 // Rotate the orientation 180 degrees when reversing (points y-axis up by default)
                 pointAlongStreamline.rotation = Quaternion.LookRotation(pointAlongStreamline.rotation * (-Vector3.forward));
 
-                currentPoint += h * pointAlongStreamline.magnitude * (pointAlongStreamline.rotation * Vector3.forward);
+                currentPoint += h * (pointAlongStreamline.rotation * Vector3.forward);
             }
-            
+
             else
             {
-                currentPoint += h * pointAlongStreamline.magnitude * (pointAlongStreamline.rotation * Vector3.forward);
+                currentPoint += h * (pointAlongStreamline.rotation * Vector3.forward);
             }
-            
+
+            try
+            {
+                // Check for neighbors
+                Tuple<bool, OrientedPoint> proxim = FindClosestCollisionPoint(pointAlongStreamline, roadPoints, searchRadius, searchAngle);
+
+                if (proxim.Item1)
+                {
+
+                    OrientedPoint target = proxim.Item2;
+
+                    // Debug.Log("Connecting " + pointAlongStreamline.position + " with " + target.position);
+                    spline = new Spline();
+
+                    float theta = Vector3.SignedAngle(pointAlongStreamline.rotation * Vector3.forward, target.rotation * Vector3.forward, Vector3.up);
+                    Debug.Log("Theta = " + theta);
+
+                    // Orient target based on approach from left or right
+                    if (theta < -45 && theta > -135) // Road approaches from the right
+                    {
+                        target.rotation = Quaternion.LookRotation(target.rotation * Vector3.right);
+                    }
+                    else if (theta > 45 && theta < 135) // Road approaches from the left 
+                    {
+                        target.rotation = Quaternion.LookRotation(target.rotation * Vector3.left);
+                    }
+                    else { return hyperstreamline; }
+
+                    // Generate a spline for the connecting path
+                    List<OrientedPoint> splinePath = spline.Connect(pointAlongStreamline, target);
+                    hyperstreamline = hyperstreamline.Concat(splinePath).ToList();
+
+                    // Update neighbor in target point
+                    target.neighbors.Add(hyperstreamline.Last());
+
+                    return hyperstreamline;
+                }
+
+            }
+            catch { }
+
             // Add to array of oriented points and repeat iteration
             hyperstreamline.Add(pointAlongStreamline);
 
+            // Update neighbor list
+            if (i > 0) { hyperstreamline[i - 1].neighbors.Add(hyperstreamline[i]); }
         }
 
         return hyperstreamline;
-
-        /*
-         // Perform RK4
-        Vector3 k1 = FieldFunction(startPoint, scale, minor);
-        Vector3 k2 = FieldFunction(startPoint + k1 / 2f, scale, minor);
-        Vector3 k3 = FieldFunction(startPoint + k2 / 2f, scale, minor);
-        Vector3 k4 = FieldFunction(startPoint + k3, scale, minor);
-        // startPoint =  (k1 / 6f + k2 / 3f + k3 / 3f + k4 / 6f);
-        */
     }
 
 
+
+    // Function for debugging - draws the streamline field visually
     public void TensorfieldGrid(System.Func<Vector3, float, float, bool, OrientedPoint> Gradient,
                                 float scale, float offset, bool major, int mapHeight, int mapWidth)
     {
@@ -131,5 +258,4 @@ public class Field
             }
         }
     }
-
 }
