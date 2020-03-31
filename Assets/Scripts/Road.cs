@@ -19,7 +19,7 @@ public class Road : MonoBehaviour
     MeshRenderer rend;
 
     public bool drawVertexGizmos;
-    public float scale = 350;
+    public float scale;
     public int roadLength = 5000;
 
     public OrientedPoint seed;
@@ -42,12 +42,14 @@ public class Road : MonoBehaviour
         int interval = GetComponentInParent<RoadNetwork>().interval;
         List<OrientedPoint>[,] roadPoints = GetComponentInParent<RoadNetwork>().roadPoints;
 
+        scale = GetComponentInParent<CityGenerator>().scale;
         field = new Field();
-        path = field.Trace(field.Orthogonal, this.scale, offset, major, transform.position + seed.position, rev, length, roadPoints);
+        path = field.Trace(field.Orthogonal, scale, offset, major, transform.position + seed.position, rev, length, roadPoints);
         if (path.Count == 0) { return; }
 
         Extrude(path);
 
+    
         // Pass road path to parent
         foreach (OrientedPoint point in path)
         {

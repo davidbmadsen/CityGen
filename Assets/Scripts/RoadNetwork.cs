@@ -26,13 +26,13 @@ public class RoadNetwork : MonoBehaviour
     public bool drawGizmos;
     public float offset = 15000;
     public int scale;
+    public int interval;
 
-    public int interval = 50;
     public OrientedPoint seed = new OrientedPoint();
     public Vector3 startPoint = new Vector3();
     public int length;
 
-    public void GenerateRoadNetwork(OrientedPoint startingSeed, int iter, int length)
+    public void GenerateRoadNetwork(OrientedPoint startingSeed, int iter, int length, int interval)
     {
         // Create and initialize new lookup matrix 
         roadPoints = new List<OrientedPoint>[500, 500];
@@ -72,6 +72,20 @@ public class RoadNetwork : MonoBehaviour
             leftRoad.GetComponent<Road>().GenerateRoad(roadSeed, length, major, false);
             rightRoad.GetComponent<Road>().GenerateRoad(roadSeed, length, major, true);
 
+            // Update seeds neighbor
+            try
+            {
+                roadSeed.neighbors.Add(leftRoad.GetComponent<Road>().path.First());
+                leftRoad.GetComponent<Road>().path.First().neighbors.Add(roadSeed);
+            }
+            catch { }
+            try 
+            {
+                roadSeed.neighbors.Add(rightRoad.GetComponent<Road>().path.First());
+                rightRoad.GetComponent<Road>().path.First().neighbors.Add(roadSeed);
+            }
+            catch { }
+
 
             iter--;
         }
@@ -108,6 +122,7 @@ public class RoadNetwork : MonoBehaviour
             }
             catch { }
         }
+
     }
 
     GameObject GenerateChildRoad()

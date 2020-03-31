@@ -14,7 +14,7 @@ public class CityGenerator : MonoBehaviour
     public int iter = 40;
     public int length = 5000;
     public int offset = 15000;
-
+    public int scale = 350;
     public int interval = 50;
 
     public void GenerateCity()
@@ -23,12 +23,13 @@ public class CityGenerator : MonoBehaviour
         startingSeed.position = startingPoint;
 
         InitiateGameObjects();
-        
-        // Generate the road network
-        GameObject.Find("Road Network").GetComponent<RoadNetwork>().GenerateRoadNetwork(startingSeed, iter, length);
-    
-        // Generate the building network
 
+        // Generate the road network
+        GameObject.Find("Road Network").GetComponent<RoadNetwork>().GenerateRoadNetwork(startingSeed, iter, length, interval);
+
+        // Generate the building network
+        List<OrientedPoint>[,] roadPoints = this.GetComponentInChildren<RoadNetwork>().roadPoints;
+        GameObject.Find("Buildings").GetComponent<BuildingGenerator>().BuildHouses(roadPoints);
     }
 
     void InitiateGameObjects()
@@ -45,4 +46,25 @@ public class CityGenerator : MonoBehaviour
         buildings.transform.parent = this.transform;
         buildings.AddComponent<BuildingGenerator>();
     }
+    /*
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+
+
+        List<OrientedPoint>[,] roadPoints = this.GetComponentInChildren<RoadNetwork>().roadPoints;
+        int lenX = roadPoints.GetLength(0);
+        int lenZ = roadPoints.GetLength(1);
+        for (int x = 0; x < lenX; x++)
+        {
+            for (int z = 0; z < lenZ; z++)
+            {
+                foreach (OrientedPoint point in roadPoints[x, z])
+                {
+                    if (point.neighbors.Count > 2) { Gizmos.DrawSphere(point.position, 5f); }
+                }
+            }
+        }
+    }
+    */
 }

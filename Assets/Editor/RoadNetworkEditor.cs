@@ -21,7 +21,7 @@ public class RoadNetworkEditor : Editor
 
         if (GUILayout.Button("Generate"))
         {
-            roadNetwork.GenerateRoadNetwork(roadNetwork.seed, roadNetwork.iter, roadNetwork.length); 
+            roadNetwork.GenerateRoadNetwork(roadNetwork.seed, roadNetwork.iter, roadNetwork.length, roadNetwork.interval); 
         }
     }
 }

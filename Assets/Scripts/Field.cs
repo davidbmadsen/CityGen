@@ -9,10 +9,11 @@ public class Field
     /*
     Create a field of eigenvectors
     */
+
     Spline spline;
 
     // Step size
-    static float h = 10f;
+    static float h = 5f;
 
     // Search cone radius
     static int searchRadius = (int)(h * 10);
@@ -108,11 +109,11 @@ public class Field
                 }
             }
         }
-
+        /*
         // Update neighbors
         closestPoint.neighbors.Add(origin);
         origin.neighbors.Add(closestPoint);
-
+        */
         return new Tuple<bool, OrientedPoint>(flag, closestPoint);
     }
 
@@ -198,7 +199,7 @@ public class Field
                     spline = new Spline();
 
                     float theta = Vector3.SignedAngle(pointAlongStreamline.rotation * Vector3.forward, target.rotation * Vector3.forward, Vector3.up);
-                    Debug.Log("Theta = " + theta);
+                    //Debug.Log("Theta = " + theta);
 
                     // Orient target based on approach from left or right
                     if (theta < -45 && theta > -135) // Road approaches from the right
@@ -227,10 +228,16 @@ public class Field
             // Add to array of oriented points and repeat iteration
             hyperstreamline.Add(pointAlongStreamline);
 
-            // Update neighbor list
-            if (i > 0) { hyperstreamline[i - 1].neighbors.Add(hyperstreamline[i]); }
+            // Update neighbors list
+            if (i > 0)
+            {
+                hyperstreamline[i].neighbors.Add(hyperstreamline[i - 1]);
+                hyperstreamline[i - 1].neighbors.Add(hyperstreamline[i]);
+                Debug.Log("Neighbors: " + hyperstreamline[i-1].neighbors.Count);
+            }
+            
         }
-
+        
         return hyperstreamline;
     }
 
