@@ -19,11 +19,7 @@ public class Road : MonoBehaviour
     MeshRenderer rend;
 
     public bool drawVertexGizmos;
-    public float scale;
-    public int roadLength = 5000;
-
     public OrientedPoint seed;
-    public Vector3 startingPoint;
 
     public List<OrientedPoint> path;
 
@@ -31,32 +27,27 @@ public class Road : MonoBehaviour
     int[] triangles;
     Vector2[] uvs;
 
-    void Update()
-    {
-        //GenerateMesh(seed);
-    }
-
     public void GenerateRoad(OrientedPoint seed, int length, bool major, bool rev)
     {
-        float offset = GetComponentInParent<RoadNetwork>().offset;
-        int interval = GetComponentInParent<RoadNetwork>().interval;
+        // Inherit some variables from parents
+        float offset = GetComponentInParent<RoadNetwork>()._offset;
+        int interval = GetComponentInParent<RoadNetwork>()._interval;
+        int scale = GetComponentInParent<CityGenerator>().scale;
+
         List<OrientedPoint>[,] roadPoints = GetComponentInParent<RoadNetwork>().roadPoints;
 
-        scale = GetComponentInParent<CityGenerator>().scale;
         field = new Field();
         path = field.Trace(field.Orthogonal, scale, offset, major, transform.position + seed.position, rev, length, roadPoints);
+
         if (path.Count == 0) { return; }
 
         Extrude(path);
 
-    
-        // Pass road path to parent
+        // Pass road path to parent and round to chunk
         foreach (OrientedPoint point in path)
         {
             int indX = ((int)(point.position.x / 10) + roadPoints.GetLength(0) / 2);
             int indZ = ((int)(point.position.z / 10) + roadPoints.GetLength(1) / 2);
-            // Debug.Log("point: " + point.position +
-            // "\nindX: " + indX + "\nindZ: " + indZ);
 
             GetComponentInParent<RoadNetwork>().roadPoints[indX, indZ].Add(point);
         }
@@ -80,7 +71,6 @@ public class Road : MonoBehaviour
         Profile profile = new Profile(shape);
 
         // Mesh dimensions
-
         int width = profile.GetNumVertices;
         int length = path.Count;
 

@@ -70,7 +70,11 @@ public class Field
 
     bool CheckBounds(OrientedPoint point, int mapSize)
     {
-        if (point.magnitude <= 0.1 || point.position.x > mapSize || point.position.z > mapSize)
+        if (point.magnitude <= 0.1 
+        || point.position.x > mapSize 
+        || point.position.z > mapSize
+        || point.position.x < -mapSize
+        || point.position.z < -mapSize)
         {
             Debug.Log("Bounds check failed, returning...");
             return true;
@@ -149,15 +153,10 @@ public class Field
                             int length,
                             List<OrientedPoint>[,] roadPoints)
     {
-        /*
-        Trace the hyperstreamlines using RK4
-        RK4 Code courtesy of Martin Evans ()
-        */
-
         // The Vector3 point at which the streamline tracing is begun
         Vector3 currentPoint = startPoint;
 
-        int mapSize = roadPoints.GetLength(0);
+        int mapSize = (roadPoints.GetLength(0) * 5);
 
         List<OrientedPoint> hyperstreamline = new List<OrientedPoint>();
 
@@ -192,7 +191,6 @@ public class Field
 
                 if (proxim.Item1)
                 {
-
                     OrientedPoint target = proxim.Item2;
 
                     // Debug.Log("Connecting " + pointAlongStreamline.position + " with " + target.position);
@@ -223,7 +221,7 @@ public class Field
                 }
 
             }
-            catch { }
+            catch { Debug.Log("Uh oh"); }
 
             // Add to array of oriented points and repeat iteration
             hyperstreamline.Add(pointAlongStreamline);
@@ -233,11 +231,11 @@ public class Field
             {
                 hyperstreamline[i].neighbors.Add(hyperstreamline[i - 1]);
                 hyperstreamline[i - 1].neighbors.Add(hyperstreamline[i]);
-                Debug.Log("Neighbors: " + hyperstreamline[i-1].neighbors.Count);
+                Debug.Log("Neighbors: " + hyperstreamline[i - 1].neighbors.Count);
             }
-            
+
         }
-        
+        Debug.Log("End of trace(), path length = " + hyperstreamline.Count);
         return hyperstreamline;
     }
 

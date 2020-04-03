@@ -21,20 +21,32 @@ public class RoadNetwork : MonoBehaviour
 
     public Queue<OrientedPoint> seeds = new Queue<OrientedPoint>();
     public bool autoUpdate;
-    public int iter;
 
     public bool drawGizmos;
-    public float offset = 15000;
-    public int scale;
-    public int interval;
+    public int _iter;
+    public int _interval;
+    public int _offset;
+    public int _length;
+    
+    int ctr;
 
     public OrientedPoint seed = new OrientedPoint();
     public Vector3 startPoint = new Vector3();
-    public int length;
+    public int length = 5000; // Global max length for each road generated
 
     public void GenerateRoadNetwork(OrientedPoint startingSeed, int iter, int length, int interval)
     {
-        // Create and initialize new lookup matrix 
+
+        // Reference to parent
+        CityGenerator parent = gameObject.GetComponentInParent<CityGenerator>();
+        
+        _interval = parent.interval;
+        _offset = parent.offset;
+        _length = parent.length;
+        _iter = parent.length;
+        ctr = _iter;
+
+        // Create and initialize new lookup matrix (chunks)
         roadPoints = new List<OrientedPoint>[500, 500];
         for (int x = 0; x < roadPoints.GetLength(0); x++)
         {
@@ -51,11 +63,12 @@ public class RoadNetwork : MonoBehaviour
         GameObject mainRoad = new GameObject("Main Road");
         mainRoad.AddComponent<Road>().transform.parent = this.transform;
 
+        Road road = mainRoad.GetComponent<Road>();
         // Generate the first road from the starting point
-        mainRoad.GetComponent<Road>().GenerateRoad(startingSeed, length, true, false);
+        road.GenerateRoad(startingSeed, length, true, false);
 
         // Extract seeds from the road and add to queue
-        AddCandidatesToQueue(mainRoad.GetComponent<Road>().path, interval);
+        AddCandidatesToQueue(road.path, interval);
 
 
         while (seeds.Count != 0 && iter > 0)
@@ -68,29 +81,46 @@ public class RoadNetwork : MonoBehaviour
             // Flip the major flag for the next road
             bool major = !roadSeed.major;
 
+            Road left = leftRoad.GetComponent<Road>();
+            Road right = rightRoad.GetComponent<Road>();
+
             // Generate roads in either direction from seed
-            leftRoad.GetComponent<Road>().GenerateRoad(roadSeed, length, major, false);
-            rightRoad.GetComponent<Road>().GenerateRoad(roadSeed, length, major, true);
 
-            // Update seeds neighbor
-            try
-            {
-                roadSeed.neighbors.Add(leftRoad.GetComponent<Road>().path.First());
-                leftRoad.GetComponent<Road>().path.First().neighbors.Add(roadSeed);
-            }
-            catch { }
-            try 
-            {
-                roadSeed.neighbors.Add(rightRoad.GetComponent<Road>().path.First());
-                rightRoad.GetComponent<Road>().path.First().neighbors.Add(roadSeed);
-            }
-            catch { }
-
+            GenerateRoads(left, right, roadSeed, interval, major);
 
             iter--;
+            ctr--;
+        }
+    }
+
+    void GenerateRoads(Road left, Road right, OrientedPoint seed, int interval, bool majorFlag)
+    {
+        // Function for generating left and right roads from a candidate point
+        // Assumes existing gameobjects with Road.cs component attached
+
+        // Generate the roads
+        left.GenerateRoad(seed, length, majorFlag, false);
+        right.GenerateRoad(seed, length, majorFlag, true);
+        
+        // Update neighbors in the newly generated roads and their seed points
+        if (left.path.Any())
+        {
+            seed.neighbors.Add(left.path.First());
+            left.path.First().neighbors.Add(seed);
+
+            AddCandidatesToQueue(left.path, interval);
         }
 
+        if (right.path.Any())
+        {
+            seed.neighbors.Add(right.path.First());
+            right.path.First().neighbors.Add(seed);
+
+            AddCandidatesToQueue(right.path, interval);
+        }
     }
+
+
 
     void AddCandidatesToQueue(List<OrientedPoint> path, int interval)
     {
@@ -124,6 +154,13 @@ public class RoadNetwork : MonoBehaviour
         }
 
     }
+
+    /*
+    void OnGUI()
+    {   
+        GUI.Label(new Rect(10, 10, 100, 20), "Roads: " + _iter + "/" + ctr);
+    }
+    */
 
     GameObject GenerateChildRoad()
     {

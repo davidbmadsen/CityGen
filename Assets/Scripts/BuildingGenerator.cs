@@ -134,7 +134,7 @@ public class BuildingGenerator : MonoBehaviour
         {
             // If the current node is found to have >2 neighbors, the subpath is returned along
             // with the index for the next iteration
-            if (path[i].neighbors.Count > 2)
+            if (path[i].neighbors.Count > 2) 
             {
                 return new Tuple<int, List<OrientedPoint>>(i + 2, subpath);
             }
