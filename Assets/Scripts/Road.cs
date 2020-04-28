@@ -53,7 +53,6 @@ public class Road : MonoBehaviour
         }
     }
 
-
     public void Extrude(List<OrientedPoint> path)
     {
         roadMesh = new Mesh();

@@ -46,21 +46,108 @@ public class BuildingGenerator : MonoBehaviour
         return offsetPath;
     }
 
-    Mesh CurvedHouse(List<OrientedPoint> path, int distanceFromRoad, int width, bool orientation)
+    List<OrientedPoint> OffsetPathUp(List<OrientedPoint> path, int height)
     {
-        // Create vertices that is "width" out from the path
-        // Not the same as width in the Road generator script
+        List<OrientedPoint> offsetPath = new List<OrientedPoint>();
+        foreach (OrientedPoint point in path)
+        {
+            offsetPath.Add(new OrientedPoint(
+                point.position + point.rotation * Vector3.up * height,
+                point.rotation,
+                0,
+                new List<OrientedPoint>()
+            ));
+        }
+
+        return offsetPath;
+    }
+
+    Mesh CurvedHouse(List<OrientedPoint> path, int distanceFromRoad, int width, int height, bool orientation)
+    {
+        /*
+        Function for creating prismatic houses that curve along a path
+        */
+
+        // Create offset paths
+        // Bottom face
         List<OrientedPoint> side = OffsetPath(path, distanceFromRoad, orientation);
         List<OrientedPoint> edge = OffsetPath(path, width, orientation);
 
+        // Top face
+        List<OrientedPoint> sideTop = OffsetPathUp(side, height);
+        List<OrientedPoint> edgeTop = OffsetPathUp(edge, height);
+
+
+        // Front face
+        List<OrientedPoint> frontBottom = new List<OrientedPoint>();
+        frontBottom.Add(side[0]); frontBottom.Add(edge[0]);
+
+        List<OrientedPoint> frontTop = new List<OrientedPoint>();
+        frontTop.Add(sideTop[0]); frontTop.Add(edgeTop[0]);
+
+        // Rear face
+        List<OrientedPoint> backBottom = new List<OrientedPoint>();
+        backBottom.Add(side.Last()); backBottom.Add(edge.Last());
+
+        List<OrientedPoint> backTop = new List<OrientedPoint>();
+        backTop.Add(sideTop.Last()); backTop.Add(edgeTop.Last());
+
+        // Side faces share vertices with the top and bottom faces
         int length = path.Count;
 
         // Create the base mesh, triangles and vertices
         Mesh mesh = new Mesh();
 
+        // Similar to road extrusion code, modified for prismatic house meshes
+        List<Vector3> vertices = new List<Vector3>(); //[length * 8 + 8];
+        List<int> triangles = new List<int>(); //[6 * (length - 1) * 4 + 4];
+        List<Vector2> uvs = new List<Vector2>();
+
+        // Calculate each face of the house separately and add to the final mesh
+        // Top face 
+        triangles.AddRange(CalculateTriangleIndices(length));
+        vertices.AddRange(CalculateVertices(sideTop, edgeTop, orientation, ref uvs));
+
+        // Right face
+        triangles.AddRange(CalculateTriangleIndices(length, vertices.Count));
+        vertices.AddRange(CalculateVertices(sideTop, side, !orientation, ref uvs));
+
+        // Left face
+        triangles.AddRange(CalculateTriangleIndices(length, vertices.Count));
+        vertices.AddRange(CalculateVertices(edgeTop, edge, orientation, ref uvs));
+
+        // Bottom face  
+        triangles.AddRange(CalculateTriangleIndices(length, vertices.Count));
+        vertices.AddRange(CalculateVertices(side, edge, !orientation, ref uvs));
+
+        // Front Face
+        triangles.AddRange(CalculateTriangleIndices(2, vertices.Count));
+        vertices.AddRange(CalculateVertices(frontBottom, frontTop, !orientation, ref uvs));
+
+        // Back Face
+        triangles.AddRange(CalculateTriangleIndices(2, vertices.Count));
+        vertices.AddRange(CalculateVertices(backBottom, backTop, orientation, ref uvs));
+
+        // Update mesh
+        mesh.Clear();
+        mesh.vertices = vertices.ToArray();
+        mesh.triangles = triangles.ToArray();
+        mesh.uv = uvs.ToArray();
+        mesh.RecalculateNormals();
+
+        return mesh;
+    }
+
+    Vector3[] CalculateVertices(List<OrientedPoint> pathOne, List<OrientedPoint> pathTwo, bool orientation, ref List<Vector2> uvs)
+    {
+        // Function for calculating triangle indices between two paths for a single face of the prism (house)
+        // Length of the paths (must be of equal length)
+        int length = pathOne.Count;
         // Similar to road extrusion code, only the "width" here is always one
+
+
         Vector3[] vertices = new Vector3[length * 2];
-        int[] triangles = new int[6 * (length - 1)];
+
 
         // Add vertices to vertices array
         if (orientation)
@@ -68,27 +155,40 @@ public class BuildingGenerator : MonoBehaviour
             for (int i = 0, vert = 0; i < length; i++)
             {
                 // Add both path and edge as vertices
-                vertices[vert] = side[i].position + side[i].rotation * Vector3.right;
+                vertices[vert] = pathOne[i].position;
+                uvs.Add(new Vector2(pathOne[i].position.x, vert));
                 vert++;
-                vertices[vert] = edge[i].position;
+                vertices[vert] = pathTwo[i].position;
+                uvs.Add(new Vector2(pathTwo[i].position.x, vert));
                 vert++;
             }
         }
+
         else
         {
             for (int i = 0, vert = 0; i < length; i++)
             {
                 // Add both path and edge as vertices
-                vertices[vert] = edge[i].position;
+                vertices[vert] = pathTwo[i].position;
+                uvs.Add(new Vector2(pathTwo[i].position.x, vert));
                 vert++;
-                vertices[vert] = side[i].position + side[i].rotation * Vector3.left;
+                vertices[vert] = pathOne[i].position;
+                uvs.Add(new Vector2(pathOne[i].position.x, vert));
                 vert++;
             }
         }
 
+        //Debug.Log("Length: " + length + "\nVertices: " + vertices.Length);
 
+        return vertices;
+    }
+
+    int[] CalculateTriangleIndices(int length, int indexOffset = 0)
+    {
+
+        int[] triangles = new int[6 * (length - 1)];
         // Calculate triangle indices (same method as Road script)
-        int triIdx = 0, vertIdx = 0;
+        int triIdx = 0, vertIdx = indexOffset;
         for (int j = 0; j < length - 1; j++)
         {
             triangles[triIdx] = vertIdx;
@@ -101,14 +201,8 @@ public class BuildingGenerator : MonoBehaviour
             triIdx += 6;
             vertIdx += 2;
         }
-
-        // Update mesh
-        mesh.Clear();
-        mesh.vertices = vertices;
-        mesh.triangles = triangles;
-        mesh.RecalculateNormals();
-
-        return mesh;
+        // Debug.Log("vertIdx after loop:" + vertIdx);
+        return triangles;
     }
 
     public GameObject NewHouse()
@@ -120,11 +214,12 @@ public class BuildingGenerator : MonoBehaviour
         house.transform.parent = this.transform;
         house.AddComponent<MeshFilter>();
         house.AddComponent<MeshRenderer>();
+        house.AddComponent<MeshCollider>();
 
         return house;
     }
 
-    Tuple<int, List<OrientedPoint>> GetSubpath(List<OrientedPoint> path, int idx, int length)
+    Tuple<int, List<OrientedPoint>> GetSubpath(List<OrientedPoint> path, int idx, int length, bool orientation)
     {
         // Function for getting a subpath from a list of oriented points from index to length
         List<OrientedPoint> subpath = new List<OrientedPoint>();
@@ -134,15 +229,34 @@ public class BuildingGenerator : MonoBehaviour
         {
             // If the current node is found to have >2 neighbors, the subpath is returned along
             // with the index for the next iteration
-            if (path[i].neighbors.Count > 2) 
+            if (path[i].neighbors.Count > 2)
             {
                 return new Tuple<int, List<OrientedPoint>>(i + 2, subpath);
             }
 
-            // Each iteration of the while-loop, points are added to the subpath
-            subpath.Add(path[i]);
-
-            i++;
+            // Check for conflicting mesh colliders (houses) using raycast to their mesh colliders
+            Debug.Log("Raycast: " + Physics.Raycast(path[i].position + Vector3.up * 5f, path[i].rotation * Vector3.left, 10f));
+            Vector3 origin = path[i].position + Vector3.up * 5f;
+            if (orientation && Physics.Raycast(origin, path[i].rotation * Vector3.right, 30f))
+            {
+                Debug.Log("Collision detected to the left");
+                Debug.DrawRay(path[i].position, path[i].rotation * Vector3.right * 30f);
+                i++;
+                continue;
+            }
+            else if (!orientation && Physics.Raycast(origin, path[i].rotation * Vector3.left, 30f))
+            {
+                Debug.Log("Collision detected to the right");
+                Debug.DrawRay(path[i].position, path[i].rotation * Vector3.left * 30f);
+                i++;
+                continue;
+            }
+            else
+            {
+                // Points are added to the subpath if no collisions are previously found
+                subpath.Add(path[i]);
+                i++;
+            }
         }
 
         return new Tuple<int, List<OrientedPoint>>(idx + length, subpath);
@@ -153,6 +267,10 @@ public class BuildingGenerator : MonoBehaviour
         // Initial parameters for building generation
         int idx = 0;
         int length = rnd.Next(3, 10);
+
+        int[] heights = new int[12] {
+            15, 16, 17, 19, 21, 23, 27, 33, 39, 43, 51, 110
+        };
         while (idx < roadLength)
         {
             // Place an empty lot (for variation)
@@ -164,7 +282,7 @@ public class BuildingGenerator : MonoBehaviour
             }
 
             // Get subpath from idx and "length" forward
-            Tuple<int, List<OrientedPoint>> subpath = GetSubpath(path, idx, length);
+            Tuple<int, List<OrientedPoint>> subpath = GetSubpath(path, idx, length, orientation);
 
             // Update idx and calculate length for next house
             idx = subpath.Item1 - 1;
@@ -174,7 +292,15 @@ public class BuildingGenerator : MonoBehaviour
 
             // Build house
             GameObject house = NewHouse();
-            house.GetComponent<MeshFilter>().mesh = CurvedHouse(subpath.Item2, 4, rnd.Next(20, 30), orientation);
+            int height = heights[rnd.Next(0, 12)];
+            Mesh houseMesh = CurvedHouse(subpath.Item2, 4, rnd.Next(20, 30), height, orientation);
+            house.GetComponent<MeshFilter>().sharedMesh = houseMesh;
+            house.GetComponent<MeshCollider>().sharedMesh = houseMesh;
+            house.GetComponent<MeshCollider>().convex = true;
+            
+            // Materials
+            Material bldgMat = Resources.Load("building", typeof(Material)) as Material;
+            house.GetComponent<MeshRenderer>().material = bldgMat;
         }
     }
 
@@ -183,7 +309,7 @@ public class BuildingGenerator : MonoBehaviour
         // Get all the roads from the road network
         GameObject roadNetwork = GameObject.Find("CityGenerator/Road Network");
 
-        /*
+
         // Get all the children of the road network (transforms)
         foreach (Transform road in roadNetwork.transform)
         {
@@ -199,7 +325,9 @@ public class BuildingGenerator : MonoBehaviour
             PlaceHouse(path, roadLength, false);
 
         }
-        */
+
+
+        /*
         GameObject mainRoad = GameObject.Find("Main Road");
 
         List<OrientedPoint> path = mainRoad.gameObject.GetComponent<Road>().path;
@@ -208,6 +336,6 @@ public class BuildingGenerator : MonoBehaviour
         // Place houses on left and right side of the path
         PlaceHouse(path, roadLength, true);
         PlaceHouse(path, roadLength, false);
+        */
     }
 }
-

@@ -57,6 +57,7 @@
      <Compile Include="Assets\Scripts\NetworkGenerator.cs" />
      <Compile Include="Assets\Scripts\Noise.cs" />
      <Compile Include="Assets\Scripts\OrientedPoint.cs" />
+     <Compile Include="Assets\Scripts\PartialMesh.cs" />
      <Compile Include="Assets\Scripts\Profile.cs" />
      <Compile Include="Assets\Scripts\Road.cs" />
      <Compile Include="Assets\Scripts\RoadMesh.cs" />

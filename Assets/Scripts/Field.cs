@@ -231,11 +231,11 @@ public class Field
             {
                 hyperstreamline[i].neighbors.Add(hyperstreamline[i - 1]);
                 hyperstreamline[i - 1].neighbors.Add(hyperstreamline[i]);
-                Debug.Log("Neighbors: " + hyperstreamline[i - 1].neighbors.Count);
+                // Debug.Log("Neighbors: " + hyperstreamline[i - 1].neighbors.Count);
             }
 
         }
-        Debug.Log("End of trace(), path length = " + hyperstreamline.Count);
+        //Debug.Log("End of trace(), path length = " + hyperstreamline.Count);
         return hyperstreamline;
     }
 
