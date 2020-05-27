@@ -37,10 +37,13 @@ public class Road : MonoBehaviour
         List<OrientedPoint>[,] roadPoints = GetComponentInParent<RoadNetwork>().roadPoints;
 
         field = new Field();
-        path = field.Trace(field.Orthogonal, scale, offset, major, transform.position + seed.position, rev, length, roadPoints);
+        path = field.Trace(field.SampleOrthogonal, scale, offset, major, transform.position + seed.position, rev, length, roadPoints);
 
         if (path.Count == 0) { return; }
 
+        // Update neighbor of first point in path
+        path[0].neighbors.Add(seed);
+        
         Extrude(path);
 
         // Pass road path to parent and round to chunk

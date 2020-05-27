@@ -619,10 +619,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   startingPoint: {x: 185, y: 0, z: 300}
-  iter: 2000
+  iter: 15000
   length: 200
   offset: 15000
-  scale: 600
+  scale: 1200
   interval: 50
 --- !u!4 &1531715043
 Transform:

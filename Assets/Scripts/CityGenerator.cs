@@ -19,6 +19,9 @@ public class CityGenerator : MonoBehaviour
 
     public void GenerateCity()
     {
+        System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+        stopwatch.Start();
+
         startingSeed = new OrientedPoint();
         startingSeed.position = startingPoint;
 
@@ -26,10 +29,35 @@ public class CityGenerator : MonoBehaviour
 
         // Generate the road network
         GameObject.Find("Road Network").GetComponent<RoadNetwork>().GenerateRoadNetwork(startingSeed, iter, length, interval);
+        
+        stopwatch.Stop();
+        long roadTime = stopwatch.ElapsedMilliseconds;
+        stopwatch.Reset();
+        stopwatch.Start();
 
         // Generate the building network
         List<OrientedPoint>[,] roadPoints = this.GetComponentInChildren<RoadNetwork>().roadPoints;
         GameObject.Find("Buildings").GetComponent<BuildingGenerator>().BuildHouses(roadPoints);
+        stopwatch.Stop();
+
+        long buildingTime = stopwatch.ElapsedMilliseconds;
+
+        int n = 0;
+        foreach (List<OrientedPoint> list in roadPoints)
+        {
+            n += list.Count;
+
+        }
+
+        int h = 0;
+        foreach (Transform t in GameObject.Find("Buildings").GetComponentsInChildren<Transform>())
+        {
+            h += 1;
+        }
+
+        Debug.Log("Number of road points: " + n + " (time: " + roadTime + "ms)" +
+            "\nTotal Buildings: "+ (h-1) + " (time: " + buildingTime + "ms)" +
+            "\nTotal time: " + (long)(roadTime + buildingTime) + "ms");
     }
 
     void InitiateGameObjects()
@@ -46,25 +74,7 @@ public class CityGenerator : MonoBehaviour
         buildings.transform.parent = this.transform;
         buildings.AddComponent<BuildingGenerator>();
     }
-    /*
-    void OnDrawGizmos()
-    {
-        Gizmos.color = Color.red;
 
 
-        List<OrientedPoint>[,] roadPoints = this.GetComponentInChildren<RoadNetwork>().roadPoints;
-        int lenX = roadPoints.GetLength(0);
-        int lenZ = roadPoints.GetLength(1);
-        for (int x = 0; x < lenX; x++)
-        {
-            for (int z = 0; z < lenZ; z++)
-            {
-                foreach (OrientedPoint point in roadPoints[x, z])
-                {
-                    if (point.neighbors.Count > 2) { Gizmos.DrawSphere(point.position, 5f); }
-                }
-            }
-        }
-    }
-    */
+
 }

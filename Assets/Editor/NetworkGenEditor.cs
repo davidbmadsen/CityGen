@@ -19,7 +19,7 @@ public class NetworkGenEditor : Editor
             if (netGen.autoUpdate)
             {   
                 netGen.DrawStreamlines();
-                field.TensorfieldGrid(field.Orthogonal, netGen.scale, netGen.offset, true, netGen.mapHeight, netGen.mapWidth);
+                field.TensorfieldGrid(field.SampleOrthogonal, netGen.scale, netGen.offset, true, netGen.mapHeight, netGen.mapWidth);
             }
             // netGen.DrawLines();
             // netGen.DrawStreamlines();
@@ -49,7 +49,7 @@ public class NetworkGenEditor : Editor
         // Button to draw lines (roads) between gameObjects (junctions)
         if (GUILayout.Button("Debug: Draw tensorfield"))
         {
-            field.TensorfieldGrid(field.Orthogonal, netGen.scale, netGen.offset, true, netGen.mapHeight, netGen.mapWidth);
+            field.TensorfieldGrid(field.SampleOrthogonal, netGen.scale, netGen.offset, true, netGen.mapHeight, netGen.mapWidth);
         }
 
         /*

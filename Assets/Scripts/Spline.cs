@@ -1,9 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 
-public class Spline 
+public class Spline
 {
     /* Class for connecting to roads with a spline interpolation
 
@@ -28,10 +29,21 @@ public class Spline
             path.Add(BezierCubic(start, end, (i / (float)(length - 1))));
 
             // Add current point to previous neighbor list
-            if (i > 0) { path[i - 1].neighbors.Add(path[i]); }
+            if (i > 0)
+            {
+                path[i - 1].neighbors.Add(path[i]);
+                path[i].neighbors.Add(path[i - 1]);
+            }
+            
         }
-        pointsPath = path;
 
+        // Update first and last neighbors
+        start.neighbors.Add(path.First());
+        path.Last().neighbors.Add(end);
+        end.neighbors.Add(path.Last());
+        
+        // Update Public
+        pointsPath = path;
 
         return path;
     }

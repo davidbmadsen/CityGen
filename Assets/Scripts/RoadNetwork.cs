@@ -32,7 +32,7 @@ public class RoadNetwork : MonoBehaviour
 
     public OrientedPoint seed = new OrientedPoint();
     public Vector3 startPoint = new Vector3();
-    public int length = 5000; // Global max length for each road generated
+    public int length; // = 5000; // Global max length for each road generated
 
     public void GenerateRoadNetwork(OrientedPoint startingSeed, int iter, int length, int interval)
     {
@@ -99,8 +99,8 @@ public class RoadNetwork : MonoBehaviour
         // Assumes existing gameobjects with Road.cs component attached
 
         // Generate the roads
-        left.GenerateRoad(seed, length, majorFlag, false);
-        right.GenerateRoad(seed, length, majorFlag, true);
+        left.GenerateRoad(seed, _length, majorFlag, false);
+        right.GenerateRoad(seed, _length, majorFlag, true);
         
         // Update neighbors in the newly generated roads and their seed points
         if (left.path.Any())
@@ -146,6 +146,9 @@ public class RoadNetwork : MonoBehaviour
                     foreach (OrientedPoint point in pointsList)
                     {
                         Gizmos.DrawSphere(point.position, 1f);
+                        if (point.neighbors.Count > 2){
+                            Gizmos.DrawSphere(point.position, 5f);
+                        }
                         Gizmos.DrawRay(point.position, point.rotation * Vector3.forward * 2f);
                     }
                 }

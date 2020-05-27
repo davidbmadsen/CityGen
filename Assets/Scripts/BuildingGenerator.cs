@@ -208,7 +208,7 @@ public class BuildingGenerator : MonoBehaviour
     public GameObject NewHouse()
     {
         GameObject house = new GameObject();
-        house.name = "house";
+        house.name = "Building";
 
         house.transform.position += new Vector3(0, 0.1f, 0);
         house.transform.parent = this.transform;
@@ -230,24 +230,21 @@ public class BuildingGenerator : MonoBehaviour
             // If the current node is found to have >2 neighbors, the subpath is returned along
             // with the index for the next iteration
             if (path[i].neighbors.Count > 2)
-            {
-                return new Tuple<int, List<OrientedPoint>>(i + 2, subpath);
+            {   
+                return new Tuple<int, List<OrientedPoint>>(i + 1, subpath);
             }
-
+            
             // Check for conflicting mesh colliders (houses) using raycast to their mesh colliders
-            Debug.Log("Raycast: " + Physics.Raycast(path[i].position + Vector3.up * 5f, path[i].rotation * Vector3.left, 10f));
             Vector3 origin = path[i].position + Vector3.up * 5f;
-            if (orientation && Physics.Raycast(origin, path[i].rotation * Vector3.right, 30f))
+            if (orientation && Physics.Raycast(origin, path[i].rotation * Vector3.right, 25f))
             {
-                Debug.Log("Collision detected to the left");
-                Debug.DrawRay(path[i].position, path[i].rotation * Vector3.right * 30f);
+                
                 i++;
                 continue;
             }
-            else if (!orientation && Physics.Raycast(origin, path[i].rotation * Vector3.left, 30f))
+            else if (!orientation && Physics.Raycast(origin, path[i].rotation * Vector3.left, 25f))
             {
-                Debug.Log("Collision detected to the right");
-                Debug.DrawRay(path[i].position, path[i].rotation * Vector3.left * 30f);
+                
                 i++;
                 continue;
             }
@@ -262,19 +259,37 @@ public class BuildingGenerator : MonoBehaviour
         return new Tuple<int, List<OrientedPoint>>(idx + length, subpath);
     }
 
+    float GetNoiseVal(OrientedPoint point, int scale){
+        
+        int offset = 12500;
+
+        System.Func<float, float, float> f = Mathf.PerlinNoise;
+        float x_0 = (point.position.x + offset) / scale;
+        float z_0 = (point.position.z + offset) / scale;
+
+        // Return values from 0-2
+        return f(x_0, z_0);
+    }
+
     void PlaceHouse(List<OrientedPoint> path, int roadLength, bool orientation)
     {
         // Initial parameters for building generation
         int idx = 0;
         int length = rnd.Next(3, 10);
 
-        int[] heights = new int[12] {
-            15, 16, 17, 19, 21, 23, 27, 33, 39, 43, 51, 110
-        };
+        // Small and tall buildings (downtown ish)
+        int[] heights = new int[12] { 15, 16, 17, 19, 21, 23, 27, 33, 39, 43, 51, 110 };
+
+        // Only skyscrapers
+
+        // Rural countryside
+        //int[] heights = new int[12] { 15, 16, 17, 19, 21, 15, 16, 17, 19, 21, 23, 20 };
+
         while (idx < roadLength)
         {
+            int skipRate = 20;
             // Place an empty lot (for variation)
-            if (rnd.Next(0, 100) < 10)
+            if (rnd.Next(0, 100) < skipRate)
             {
                 idx += length - 1;
                 length = rnd.Next(1, 4);
@@ -286,13 +301,18 @@ public class BuildingGenerator : MonoBehaviour
 
             // Update idx and calculate length for next house
             idx = subpath.Item1 - 1;
-            length = rnd.Next(3, 10);
+            length = rnd.Next(5, 13);
 
-            if (subpath.Item2.Count <= 2) { continue; }
+            if (subpath.Item2.Count <= 5) { continue; }
 
             // Build house
             GameObject house = NewHouse();
+
             int height = heights[rnd.Next(0, 12)];
+            
+            // Generate heights based on the perlin noise function (between 25 and 110 +/- 15)
+            //int height = (int)(300 * GetNoiseVal(subpath.Item2[0], 100) + rnd.Next(-15, 16));
+
             Mesh houseMesh = CurvedHouse(subpath.Item2, 4, rnd.Next(20, 30), height, orientation);
             house.GetComponent<MeshFilter>().sharedMesh = houseMesh;
             house.GetComponent<MeshCollider>().sharedMesh = houseMesh;

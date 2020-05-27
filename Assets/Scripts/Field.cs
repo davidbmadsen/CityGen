@@ -29,7 +29,7 @@ public class Field
         return x + z;
     }
 
-    public OrientedPoint Orthogonal(Vector3 point, float scale, float offset, bool major)
+    public OrientedPoint SampleOrthogonal(Vector3 point, float scale, float offset, bool major)
     {
         /*
         Function for sampling the orthogonal vector field.
@@ -70,13 +70,13 @@ public class Field
 
     bool CheckBounds(OrientedPoint point, int mapSize)
     {
-        if (point.magnitude <= 0.1 
-        || point.position.x > mapSize 
+        if (point.magnitude <= 0.1
+        || point.position.x > mapSize
         || point.position.z > mapSize
         || point.position.x < -mapSize
         || point.position.z < -mapSize)
         {
-            Debug.Log("Bounds check failed, returning...");
+            // Debug.Log("Bounds check failed, returning...");
             return true;
         }
         else return false;
@@ -126,6 +126,11 @@ public class Field
         // Check if the points are too close, if yes, add them as neighbors to eachother and returns true
 
         // Angle between origin orientation and the point
+        // Check for zero look-rotation 
+        if (comparison.position - origin.position == Vector3.zero)
+        {
+            return false;
+        }
         Quaternion rotationToTarget = Quaternion.LookRotation(comparison.position - origin.position, Vector3.up);
 
         // Search in a 120 degree cone forwards
@@ -221,7 +226,7 @@ public class Field
                 }
 
             }
-            catch { Debug.Log("Uh oh"); }
+            catch { }
 
             // Add to array of oriented points and repeat iteration
             hyperstreamline.Add(pointAlongStreamline);
