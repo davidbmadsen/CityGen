@@ -14,8 +14,7 @@ public class Road : MonoBehaviour
 
     Mesh roadMesh;
     Field field;
-
-    Junction junc;
+    
     MeshRenderer rend;
 
     public bool drawVertexGizmos;
@@ -43,7 +42,7 @@ public class Road : MonoBehaviour
 
         // Update neighbor of first point in path
         path[0].neighbors.Add(seed);
-        
+
         Extrude(path);
 
         // Pass road path to parent and round to chunk

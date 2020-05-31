@@ -230,21 +230,21 @@ public class BuildingGenerator : MonoBehaviour
             // If the current node is found to have >2 neighbors, the subpath is returned along
             // with the index for the next iteration
             if (path[i].neighbors.Count > 2)
-            {   
+            {
                 return new Tuple<int, List<OrientedPoint>>(i + 1, subpath);
             }
-            
+
             // Check for conflicting mesh colliders (houses) using raycast to their mesh colliders
             Vector3 origin = path[i].position + Vector3.up * 5f;
-            if (orientation && Physics.Raycast(origin, path[i].rotation * Vector3.right, 25f))
+
+            if (orientation && Physics.Raycast(origin, path[i].rotation * Vector3.right, 20f))
             {
-                
                 i++;
                 continue;
             }
-            else if (!orientation && Physics.Raycast(origin, path[i].rotation * Vector3.left, 25f))
+            else if (!orientation && Physics.Raycast(origin, path[i].rotation * Vector3.left, 20f))
             {
-                
+
                 i++;
                 continue;
             }
@@ -259,8 +259,9 @@ public class BuildingGenerator : MonoBehaviour
         return new Tuple<int, List<OrientedPoint>>(idx + length, subpath);
     }
 
-    float GetNoiseVal(OrientedPoint point, int scale){
-        
+    float GetNoiseVal(OrientedPoint point, int scale)
+    {
+
         int offset = 12500;
 
         System.Func<float, float, float> f = Mathf.PerlinNoise;
@@ -273,9 +274,15 @@ public class BuildingGenerator : MonoBehaviour
 
     void PlaceHouse(List<OrientedPoint> path, int roadLength, bool orientation)
     {
+        int skipRate = GetComponentInParent<CityGenerator>().skipRate;
+        
+        //Clamp to values 1-100
+        if (skipRate < 1) { skipRate = 1;}
+        else if (skipRate > 100) {skipRate = 100;}
+
         // Initial parameters for building generation
         int idx = 0;
-        int length = rnd.Next(3, 10);
+        int length = rnd.Next(5, 13);
 
         // Small and tall buildings (downtown ish)
         int[] heights = new int[12] { 15, 16, 17, 19, 21, 23, 27, 33, 39, 43, 51, 110 };
@@ -287,7 +294,7 @@ public class BuildingGenerator : MonoBehaviour
 
         while (idx < roadLength)
         {
-            int skipRate = 20;
+
             // Place an empty lot (for variation)
             if (rnd.Next(0, 100) < skipRate)
             {
@@ -303,13 +310,13 @@ public class BuildingGenerator : MonoBehaviour
             idx = subpath.Item1 - 1;
             length = rnd.Next(5, 13);
 
-            if (subpath.Item2.Count <= 5) { continue; }
+            if (subpath.Item2.Count <= 2) { continue; }
 
             // Build house
             GameObject house = NewHouse();
 
             int height = heights[rnd.Next(0, 12)];
-            
+
             // Generate heights based on the perlin noise function (between 25 and 110 +/- 15)
             //int height = (int)(300 * GetNoiseVal(subpath.Item2[0], 100) + rnd.Next(-15, 16));
 
@@ -317,7 +324,7 @@ public class BuildingGenerator : MonoBehaviour
             house.GetComponent<MeshFilter>().sharedMesh = houseMesh;
             house.GetComponent<MeshCollider>().sharedMesh = houseMesh;
             house.GetComponent<MeshCollider>().convex = true;
-            
+
             // Materials
             Material bldgMat = Resources.Load("building", typeof(Material)) as Material;
             house.GetComponent<MeshRenderer>().material = bldgMat;
@@ -346,16 +353,5 @@ public class BuildingGenerator : MonoBehaviour
 
         }
 
-
-        /*
-        GameObject mainRoad = GameObject.Find("Main Road");
-
-        List<OrientedPoint> path = mainRoad.gameObject.GetComponent<Road>().path;
-        int roadLength = path.Count;
-
-        // Place houses on left and right side of the path
-        PlaceHouse(path, roadLength, true);
-        PlaceHouse(path, roadLength, false);
-        */
     }
 }

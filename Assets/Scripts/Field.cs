@@ -50,7 +50,8 @@ public class Field
 
         // Map the noise function to f for readability
         System.Func<float, float, float> f = Mathf.PerlinNoise;
-
+        
+        //System.Func<float, float, float> f = LinearGradient;
         float gradX = (f(x_0 + dx, z_0) - f(x_0, z_0)) / dx;
         float gradZ = (f(x_0, z_0 + dz) - f(x_0, z_0)) / dz;
 

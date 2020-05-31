@@ -17,6 +17,8 @@ public class CityGenerator : MonoBehaviour
     public int scale = 350;
     public int interval = 50;
 
+    public int skipRate = 20;
+
     public void GenerateCity()
     {
         System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
